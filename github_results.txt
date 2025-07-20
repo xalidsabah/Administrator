@@ -1,0 +1,21 @@
+# Subdomain enumeration results for github.com
+# Generated on: 2025-07-20 14:17:18
+# Total found: 17
+
+www.github.com - 140.82.112.3
+smtp.github.com - 140.82.112.32, 140.82.113.31, 140.82.114.31, 140.82.113.32, 140.82.112.31, 140.82.114.32
+ns1.github.com - 192.0.2.1
+ns2.github.com - 192.0.2.2
+admin.github.com - 140.82.112.24
+test.github.com - 192.0.2.1
+api.github.com - 140.82.113.6
+graphql.github.com - 140.82.114.21
+support.github.com - 185.199.109.133, 185.199.110.133, 185.199.111.133, 185.199.108.133
+help.github.com - 140.82.114.18
+docs.github.com - 185.199.108.154, 185.199.111.154, 185.199.109.154, 185.199.110.154
+wiki.github.com - 140.82.112.17
+status.github.com - 140.82.112.17
+github.github.com - 185.199.110.153, 185.199.111.153, 185.199.108.153, 185.199.109.153
+blog.github.com - 185.199.110.153, 185.199.111.153, 185.199.109.153, 185.199.108.153
+shop.github.com - 140.82.114.4
+ssh.github.com - 140.82.114.36

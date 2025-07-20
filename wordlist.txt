@@ -1,0 +1,143 @@
+# Common subdomain wordlist for testing
+# Lines starting with # are comments and will be ignored
+
+# Web services
+www
+mail
+ftp
+webmail
+smtp
+pop
+imap
+
+# DNS servers
+ns1
+ns2
+dns1
+dns2
+
+# Administration
+admin
+administrator
+root
+master
+control
+
+# Development and testing
+dev
+test
+stage
+beta
+alpha
+staging
+
+# API and services
+api
+api1
+api2
+rest
+graphql
+soap
+
+# Content delivery
+cdn
+static
+media
+img
+images
+css
+js
+assets
+
+# Mobile and apps
+m
+mobile
+wap
+app
+apps
+
+# Security
+secure
+ssl
+vpn
+remote
+
+# Support and documentation
+support
+help
+docs
+wiki
+status
+
+# Monitoring and analytics
+monitor
+stats
+analytics
+tracking
+track
+
+# Authentication
+auth
+login
+logout
+signin
+signout
+register
+signup
+
+# Management interfaces
+dashboard
+panel
+console
+terminal
+
+# Database servers
+db
+database
+mysql
+postgres
+mongo
+redis
+memcached
+
+# Load balancers
+lb
+loadbalancer
+loadbalancer1
+loadbalancer2
+
+# Development tools
+jenkins
+gitlab
+github
+bitbucket
+jira
+confluence
+
+# Container and orchestration
+docker
+kubernetes
+k8s
+helm
+
+# Monitoring tools
+prometheus
+grafana
+kibana
+logstash
+
+# Additional common subdomains
+forum
+blog
+shop
+store
+news
+chat
+irc
+ssh
+telnet
+rdp
+vnc
+gateway
+proxy
+cache 
