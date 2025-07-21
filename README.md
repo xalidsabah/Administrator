@@ -1,10 +1,6 @@
-# Alternative Subdomain Enumeration Methods
+Multi Subdomain Enumeration Methods
 
-This guide explores different approaches to subdomain enumeration, complementing your original DNS brute-force tool with multiple discovery techniques.
-
-## 🎯 Overview
-
-Your original `subdomain_searcher.py` uses DNS brute-force, which is effective but limited. Here are several alternative approaches that can find subdomains through different methods:
+This guide explores different approaches to subdomain enumeration.
 
 ## 📁 Available Tools
 
