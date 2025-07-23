@@ -24,10 +24,12 @@ import ssl
 import OpenSSL.crypto
 
 app = Flask(__name__)
-app.secret_key = 'subdomain_searcher_secret_key'
+# Generate a random secret key for session security
+app.secret_key = os.urandom(32).hex()
 
-# Global storage for scan results
+# Global storage for scan results with thread safety
 scan_results = {}
+scan_results_lock = threading.Lock()
 
 class WebSubdomainSearcher:
     def __init__(self, domain, scan_id, methods=None):
@@ -53,12 +55,13 @@ class WebSubdomainSearcher:
 
     def update_progress(self, method, status, count=0):
         """Update scan progress."""
-        if self.scan_id in scan_results:
-            scan_results[self.scan_id]['progress'][method] = {
-                'status': status,
-                'count': count,
-                'timestamp': datetime.now().isoformat()
-            }
+        with scan_results_lock:
+            if self.scan_id in scan_results:
+                scan_results[self.scan_id]['progress'][method] = {
+                    'status': status,
+                    'count': count,
+                    'timestamp': datetime.now().isoformat()
+                }
 
     def certificate_transparency_search(self):
         """Search for subdomains using Certificate Transparency logs."""
