@@ -27,8 +27,9 @@ import argparse
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Global storage for scan results
+# Global storage for scan results with thread safety
 scan_results = {}
+scan_results_lock = threading.Lock()
 
 class APISubdomainSearcher:
     def __init__(self, domain, scan_id, methods=None, wordlist=None):
@@ -55,13 +56,14 @@ class APISubdomainSearcher:
 
     def update_progress(self, method, status, count=0, details=None):
         """Update scan progress."""
-        if self.scan_id in scan_results:
-            scan_results[self.scan_id]['progress'][method] = {
-                'status': status,
-                'count': count,
-                'details': details or {},
-                'timestamp': datetime.now().isoformat()
-            }
+        with scan_results_lock:
+            if self.scan_id in scan_results:
+                scan_results[self.scan_id]['progress'][method] = {
+                    'status': status,
+                    'count': count,
+                    'details': details or {},
+                    'timestamp': datetime.now().isoformat()
+                }
 
     def certificate_transparency_search(self):
         """Search for subdomains using Certificate Transparency logs."""
@@ -308,17 +310,22 @@ class APISubdomainSearcher:
             return None
         
         with ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_subdomain = {executor.submit(check_subdomain, subdomain): subdomain 
-                                 for subdomain in subdomains_to_test}
-            
-            for future in as_completed(future_to_subdomain):
-                if not self.is_running:
-                    break
-                    
-                result = future.result()
-                if result:
-                    found_subdomains.add(result)
-                    details['found'] += 1
+            # Only submit tasks if scan is still running
+            if self.is_running:
+                future_to_subdomain = {executor.submit(check_subdomain, subdomain): subdomain 
+                                     for subdomain in subdomains_to_test}
+                
+                for future in as_completed(future_to_subdomain):
+                    if not self.is_running:
+                        # Cancel remaining futures to stop execution quickly
+                        for remaining_future in future_to_subdomain.keys():
+                            remaining_future.cancel()
+                        break
+                        
+                    result = future.result()
+                    if result:
+                        found_subdomains.add(result)
+                        details['found'] += 1
         
         self.update_progress('brute', 'completed', len(found_subdomains), details)
         return found_subdomains
@@ -348,16 +355,21 @@ class APISubdomainSearcher:
             self.found_subdomains.update(brute_results)
 
         # Update final results
-        if self.scan_id in scan_results:
-            scan_results[self.scan_id]['status'] = 'completed'
-            scan_results[self.scan_id]['total_found'] = len(self.found_subdomains)
-            scan_results[self.scan_id]['subdomains'] = list(self.found_subdomains)
-            scan_results[self.scan_id]['method_results'] = {k: list(v) for k, v in method_results.items()}
-            scan_results[self.scan_id]['elapsed_time'] = time.time() - self.start_time
+        with scan_results_lock:
+            if self.scan_id in scan_results:
+                scan_results[self.scan_id]['status'] = 'completed'
+                scan_results[self.scan_id]['total_found'] = len(self.found_subdomains)
+                scan_results[self.scan_id]['subdomains'] = list(self.found_subdomains)
+                scan_results[self.scan_id]['method_results'] = {k: list(v) for k, v in method_results.items()}
+                scan_results[self.scan_id]['elapsed_time'] = time.time() - self.start_time
 
     def stop(self):
         """Stop the scan."""
         self.is_running = False
+        # Update status in scan results
+        with scan_results_lock:
+            if self.scan_id in scan_results:
+                scan_results[self.scan_id]['status'] = 'stopped'
 
 # API Routes
 
@@ -386,27 +398,28 @@ def start_scan():
     scan_id = str(uuid.uuid4())
     
     # Initialize scan results
-    scan_results[scan_id] = {
-        'domain': domain,
-        'methods': methods,
-        'wordlist_size': len(wordlist),
-        'status': 'running',
-        'progress': {},
-        'total_found': 0,
-        'subdomains': [],
-        'method_results': {},
-        'elapsed_time': 0,
-        'start_time': datetime.now().isoformat()
-    }
-    
-    # Initialize progress for each method
-    for method in methods:
-        scan_results[scan_id]['progress'][method] = {
-            'status': 'pending',
-            'count': 0,
-            'details': {},
-            'timestamp': datetime.now().isoformat()
+    with scan_results_lock:
+        scan_results[scan_id] = {
+            'domain': domain,
+            'methods': methods,
+            'wordlist_size': len(wordlist),
+            'status': 'running',
+            'progress': {},
+            'total_found': 0,
+            'subdomains': [],
+            'method_results': {},
+            'elapsed_time': 0,
+            'start_time': datetime.now().isoformat()
         }
+        
+        # Initialize progress for each method
+        for method in methods:
+            scan_results[scan_id]['progress'][method] = {
+                'status': 'pending',
+                'count': 0,
+                'details': {},
+                'timestamp': datetime.now().isoformat()
+            }
     
     # Start scan in background thread
     searcher = APISubdomainSearcher(domain, scan_id, methods, wordlist)
@@ -425,18 +438,20 @@ def start_scan():
 @app.route('/api/v1/scan/<scan_id>', methods=['GET'])
 def get_scan_status(scan_id):
     """Get scan status and results."""
-    if scan_id not in scan_results:
-        return jsonify({'error': 'Scan not found'}), 404
-    
-    return jsonify(scan_results[scan_id])
+    with scan_results_lock:
+        if scan_id not in scan_results:
+            return jsonify({'error': 'Scan not found'}), 404
+        
+        return jsonify(scan_results[scan_id])
 
 @app.route('/api/v1/scan/<scan_id>/stop', methods=['POST'])
 def stop_scan(scan_id):
     """Stop a running scan."""
-    if scan_id not in scan_results:
-        return jsonify({'error': 'Scan not found'}), 404
-    
-    scan_results[scan_id]['status'] = 'stopped'
+    with scan_results_lock:
+        if scan_id not in scan_results:
+            return jsonify({'error': 'Scan not found'}), 404
+        
+        scan_results[scan_id]['status'] = 'stopped'
     return jsonify({'status': 'stopped', 'message': 'Scan stopped successfully'})
 
 @app.route('/api/v1/scans', methods=['GET'])
